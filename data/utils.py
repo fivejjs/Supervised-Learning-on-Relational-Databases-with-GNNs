@@ -4,7 +4,6 @@ import subprocess
 import sys
 import time
 
-import docker
 import featuretools as ft
 import networkx as nx
 import numpy as np
@@ -22,6 +21,7 @@ from neo4j import GraphDatabase
 from sklearn.model_selection import train_test_split, KFold
 from tqdm import tqdm
 
+import docker
 from __init__ import project_root, data_root
 from data.data_encoders import (
     ScalarRobustScalerEnc,

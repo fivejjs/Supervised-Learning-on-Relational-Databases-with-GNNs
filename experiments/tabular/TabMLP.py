@@ -3,8 +3,8 @@ import os
 from datetime import datetime
 
 from data.utils import get_ds_info
-from experiments.utils import run_script_with_kwargs
 from experiments.tabular import ds_names
+from experiments.utils import run_script_with_kwargs
 
 model_class_name = "TabMLP"
 train_fraction_to_use = 1.0

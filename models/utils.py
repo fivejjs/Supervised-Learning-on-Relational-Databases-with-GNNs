@@ -18,7 +18,6 @@ from tqdm import tqdm
 
 from utils import DummyWriter
 
-
 sns.set(style="white", color_codes=True)
 
 

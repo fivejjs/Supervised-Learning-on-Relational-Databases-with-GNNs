@@ -4,6 +4,7 @@ import re
 from collections import Counter
 from datetime import datetime, date
 from functools import partial
+from typing import List, Union, Iterable
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,6 @@ from sklearn.preprocessing import (
     QuantileTransformer,
     KBinsDiscretizer,
 )
-from typing import List, Union, Iterable
 
 
 class WontEncodeError(Exception):

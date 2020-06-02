@@ -1,0 +1,2 @@
+[pre-commit-hook]
+command=pylint -v

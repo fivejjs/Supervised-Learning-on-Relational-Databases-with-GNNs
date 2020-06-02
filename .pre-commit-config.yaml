@@ -1,0 +1,46 @@
+---
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  #  - repo: https://github.com/willthames/ansible-review
+  #    rev: 29c2d00ea7a5d460768b76195184098cd0873b72
+  #    hooks:
+  #      - id: ansible-review
+  #        args:
+  #          - "-c"
+  #          - "ansible_review/config.ini"
+  - repo: https://github.com/prettier/prettier
+    rev: 1.19.1
+    hooks:
+      - id: prettier
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: 542ae758f5de70a37c6c322c16b83b92fdc008bc
+    hooks:
+      - id: yamllint
+        args:
+          - "-s"
+        name: yamllint
+        description: This hook runs yamllint.
+        entry: yamllint
+        language: python
+        types: [file, yaml]
+
+  - repo: https://github.com/ambv/black
+    rev: stable
+    hooks:
+      - id: black
+        language_version: python3.7
+
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.7.9
+    hooks:
+      - id: flake8
+#  - repo: https://github.com/pre-commit/mirrors-pylint
+#    rev: ""
+#    hooks:
+#      - id: pylint
+#        args:
+#          - --max-line-length=80
+#          - --ignore-imports=yes
+#          - -d duplicate-code

@@ -13,7 +13,7 @@ class PoolMLP(GNNModelBase):
         super().__init__(n_layers=0, **kwargs)
 
     def gnn_forward(self, g: BatchedDGLGraph):
-        feats = g.ndata['h']
+        feats = g.ndata["h"]
         readout = self.readout(g, feats)
         out = self.fcout(readout)
         return out

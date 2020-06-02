@@ -10,21 +10,35 @@ class TabModelBase(nn.Module):
     Base class for all tabular models
     """
 
-    def __init__(self, writer, dataset_name, n_cont_features, cat_feat_origin_cards, max_emb_dim,
-                 activation_class_name, activation_class_kwargs, norm_class_name, norm_class_kwargs, p_dropout,
-                 one_hot_embeddings, drop_whole_embeddings, loss_class_name=None, loss_class_kwargs=None,
-                 n_out=None):
+    def __init__(
+        self,
+        writer,
+        dataset_name,
+        n_cont_features,
+        cat_feat_origin_cards,
+        max_emb_dim,
+        activation_class_name,
+        activation_class_kwargs,
+        norm_class_name,
+        norm_class_kwargs,
+        p_dropout,
+        one_hot_embeddings,
+        drop_whole_embeddings,
+        loss_class_name=None,
+        loss_class_kwargs=None,
+        n_out=None,
+    ):
         super().__init__()
         self.writer = writer
         if dataset_name is not None:
             assert n_out is None
             self.ds_info = get_ds_info(dataset_name)
-            task = self.ds_info['processed']['task']
-            if task == 'binary classification':
+            task = self.ds_info["processed"]["task"]
+            if task == "binary classification":
                 self.n_out = 2
-            elif task == 'multiclass classification':
+            elif task == "multiclass classification":
                 raise NotImplementedError  # todo
-            elif task == 'regression':
+            elif task == "regression":
                 self.n_out = 1
             self.act_on_output = False
         else:
@@ -46,14 +60,23 @@ class TabModelBase(nn.Module):
         self.cat_initializers = nn.ModuleDict()
         if isinstance(self.cat_feat_origin_cards, list):
             for col_name, card in self.cat_feat_origin_cards:
-                self.cat_initializers[col_name] = EmbeddingInitializer(card, max_emb_dim, p_dropout,
-                                                                       drop_whole_embeddings=drop_whole_embeddings,
-                                                                       one_hot=one_hot_embeddings)
-            self.init_feat_dim = sum(i.emb_dim for i in self.cat_initializers.values()) + self.n_cont_features
+                self.cat_initializers[col_name] = EmbeddingInitializer(
+                    card,
+                    max_emb_dim,
+                    p_dropout,
+                    drop_whole_embeddings=drop_whole_embeddings,
+                    one_hot=one_hot_embeddings,
+                )
+            self.init_feat_dim = (
+                sum(i.emb_dim for i in self.cat_initializers.values())
+                + self.n_cont_features
+            )
 
     def init_loss_fxn(self):
         if self.loss_class_name is not None and self.loss_class_kwargs is not None:
-            self.loss_fxn = losses.__dict__[self.loss_class_name](self, **self.loss_class_kwargs)
+            self.loss_fxn = losses.__dict__[self.loss_class_name](
+                self, **self.loss_class_kwargs
+            )
 
     def get_act(self):
         return self.act_class(**self.act_class_kwargs)

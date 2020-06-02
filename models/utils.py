@@ -16,19 +16,20 @@ from torch import nn
 from torch.nn import Parameter
 from tqdm import tqdm
 
-sns.set(style="white", color_codes=True)
-
 from utils import DummyWriter
+
+
+sns.set(style="white", color_codes=True)
 
 
 def save_train_kwargs(writer, train_kwargs):
     if not isinstance(writer, DummyWriter):
         if writer.verbose:
             pprint(train_kwargs)
-            print(f'Logging to {writer.log_dir}')
+            print(f"Logging to {writer.log_dir}")
         if not isinstance(writer, DummyWriter):
-            path = os.path.join(writer.log_dir, 'train_kwargs.json')
-            with open(path, 'w') as f:
+            path = os.path.join(writer.log_dir, "train_kwargs.json")
+            with open(path, "w") as f:
                 json.dump(train_kwargs, f, indent=2)
 
 
@@ -37,18 +38,23 @@ def save_model_checkpoint(writer, epoch, model, optimizer, lr_sched, chkpt_name=
         if chkpt_name is None:
             chkpt_name = epoch
         state_dict = {
-            'epoch': epoch,
-            'model': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'lr_sched': lr_sched}
-        if isinstance(chkpt_name, str) and 'best' in chkpt_name:
-            last_best_chkpt = glob.glob(os.path.join(writer.log_dir, f'model_checkpoint_{chkpt_name}*'))
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "lr_sched": lr_sched,
+        }
+        if isinstance(chkpt_name, str) and "best" in chkpt_name:
+            last_best_chkpt = glob.glob(
+                os.path.join(writer.log_dir, f"model_checkpoint_{chkpt_name}*")
+            )
             assert len(last_best_chkpt) < 2
             if last_best_chkpt:
                 os.remove(last_best_chkpt[0])
-            path = os.path.join(writer.log_dir, f'model_checkpoint_{chkpt_name}_{epoch}.pt')
+            path = os.path.join(
+                writer.log_dir, f"model_checkpoint_{chkpt_name}_{epoch}.pt"
+            )
         else:
-            path = os.path.join(writer.log_dir, f'model_checkpoint_{chkpt_name}.pt')
+            path = os.path.join(writer.log_dir, f"model_checkpoint_{chkpt_name}.pt")
         torch.save(state_dict, path)
 
 
@@ -69,18 +75,40 @@ def register_module_hooks(module_name, module, writer, dump_values=False):
     def log_forward_outputs(module, input, output):
         if not isinstance(output, torch.Tensor) and isinstance(output, Iterable):
             for i, o in enumerate(output):
-                writer.add_histogram(f'Forward Outputs/{module_name}_{i}', o, writer.batches_done)
+                writer.add_histogram(
+                    f"Forward Outputs/{module_name}_{i}", o, writer.batches_done
+                )
         else:
-            writer.add_histogram(f'Forward Outputs/{module_name}', output, writer.batches_done)
+            writer.add_histogram(
+                f"Forward Outputs/{module_name}", output, writer.batches_done
+            )
 
     def log_final_representation_variance(module, input, output):
         out = pd.DataFrame(output.detach().cpu().numpy())
         fig, ax = plt.subplots(figsize=(10, 10))
-        sns.violinplot(x='activation', y='val', data=out.melt(var_name='activation', value_name='val'), ax=ax)
-        writer.add_figure('Distribution of each activations in final representation', fig, writer.batches_done)
+        sns.violinplot(
+            x="activation",
+            y="val",
+            data=out.melt(var_name="activation", value_name="val"),
+            ax=ax,
+        )
+        writer.add_figure(
+            "Distribution of each activations in final representation",
+            fig,
+            writer.batches_done,
+        )
         fig, ax = plt.subplots(figsize=(10, 10))
-        sns.violinplot(x='batch', y='val', data=out.transpose().melt(var_name='batch', value_name='val'), ax=ax)
-        writer.add_figure('Distribution of each batch element in final representation', fig, writer.batches_done)
+        sns.violinplot(
+            x="batch",
+            y="val",
+            data=out.transpose().melt(var_name="batch", value_name="val"),
+            ax=ax,
+        )
+        writer.add_figure(
+            "Distribution of each batch element in final representation",
+            fig,
+            writer.batches_done,
+        )
 
     # def log_grad_inputs(module, grad_input, grad_output):
     #     for i, inp in enumerate(grad_input):
@@ -88,15 +116,17 @@ def register_module_hooks(module_name, module, writer, dump_values=False):
     #             writer.add_histogram(f'Backward Inputs/{module_name}_grad_input_{i}', inp, writer.batches_done)
 
     for n, c in module.named_children():
-        register_module_hooks('.'.join([module_name, n]), c, writer)
-        if n == 'readout':
+        register_module_hooks(".".join([module_name, n]), c, writer)
+        if n == "readout":
             c.register_forward_hook(log_final_representation_variance)
 
     module.register_forward_hook(log_forward_outputs)
     # module.register_backward_hook(log_grad_inputs)  # This more-or-less gets logged in log_param_values
 
 
-def get_good_lr(model, optimizer, train_loader, init_value=1e-7, final_value=1.0, beta=0.0):
+def get_good_lr(
+    model, optimizer, train_loader, init_value=1e-7, final_value=1.0, beta=0.0
+):
     """
     Find and return a good learning rate for this model with this optimizer.
 
@@ -105,25 +135,42 @@ def get_good_lr(model, optimizer, train_loader, init_value=1e-7, final_value=1.0
 
 
     """
-    log_lrs, losses = test_lrs(model, optimizer, train_loader, init_value=init_value, final_value=final_value,
-                               beta=beta)
+    log_lrs, losses = test_lrs(
+        model,
+        optimizer,
+        train_loader,
+        init_value=init_value,
+        final_value=final_value,
+        beta=beta,
+    )
 
     rmin_idx = np.where(np.array(losses) == min(losses))[0][-1]
     good_lr = (10 ** (log_lrs[rmin_idx])) / 100
     good_lr = max(min(good_lr, 1e-3), 1e-6)  # conservative safeguard
 
     from matplotlib import pyplot as plt
-    plt.plot(log_lrs, [min(2.5, i) for i in losses], color='blue', label='losses')
-    plt.plot(log_lrs[rmin_idx], losses[rmin_idx], color='red', marker='o', label='min lr')
-    plt.plot(np.log10(good_lr), losses[rmin_idx], color='green', marker='o', label='selected lr')
+
+    plt.plot(log_lrs, [min(2.5, i) for i in losses], color="blue", label="losses")
+    plt.plot(
+        log_lrs[rmin_idx], losses[rmin_idx], color="red", marker="o", label="min lr"
+    )
+    plt.plot(
+        np.log10(good_lr),
+        losses[rmin_idx],
+        color="green",
+        marker="o",
+        label="selected lr",
+    )
     plt.legend()
     # plt.show()  # Debugging
-    model.writer.add_figure('Test LogLR vs Loss', plt.gcf())
+    model.writer.add_figure("Test LogLR vs Loss", plt.gcf())
 
     return good_lr
 
 
-def test_lrs(model, optimizer, train_loader, init_value=1e-9, final_value=10.0, beta=0.0):
+def test_lrs(
+    model, optimizer, train_loader, init_value=1e-9, final_value=10.0, beta=0.0
+):
     """
     Adapted from https://sgugger.github.io/how-do-you-find-a-good-learning-rate.html
     Does a single epoch of training, sweeping through learning rates.
@@ -133,7 +180,7 @@ def test_lrs(model, optimizer, train_loader, init_value=1e-9, final_value=10.0, 
     mult = (final_value / init_value) ** (1 / num)
     lr = init_value
     for pg in optimizer.param_groups:
-        pg['lr'] = lr
+        pg["lr"] = lr
     avg_loss = 0.0
     best_loss = 0.0
     batch_num = 0
@@ -164,7 +211,7 @@ def test_lrs(model, optimizer, train_loader, init_value=1e-9, final_value=10.0, 
         # Update the lr for the next step
         lr *= mult
         for pg in optimizer.param_groups:
-            pg['lr'] = lr
+            pg["lr"] = lr
 
     return log_lrs, losses
 
@@ -183,7 +230,7 @@ class TypeConditionalLinear(nn.Module):
         if bias:
             self.bias = Parameter(torch.Tensor(n_types, out_features))
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter("bias", None)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -219,6 +266,6 @@ class TypeConditionalLinear(nn.Module):
     #     return out
 
     def extra_repr(self):
-        return 'in_features={}, out_features={}, n_types={}, bias={}'.format(
+        return "in_features={}, out_features={}, n_types={}, bias={}".format(
             self.in_features, self.out_features, self.n_types, self.bias is not None
         )

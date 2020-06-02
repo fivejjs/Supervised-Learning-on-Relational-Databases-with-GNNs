@@ -15,25 +15,33 @@ class RelationalGGNN(GNNModelBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.layers = nn.ModuleList()
-        self.n_relations = 2 * len(
-            self.db_info['edge_type_to_int']) - 1  # there are negative edge types for the reverse edges
+        self.n_relations = (
+            2 * len(self.db_info["edge_type_to_int"]) - 1
+        )  # there are negative edge types for the reverse edges
         for _ in range(self.n_layers):
-            self.layers.append(nn.ModuleDict({'norm': self.get_norm(self.hidden_dim),
-                                              'do': nn.Dropout(self.p_dropout),
-                                              'ggc': GatedGraphConv(in_feats=self.hidden_dim,
-                                                                    out_feats=self.hidden_dim,
-                                                                    n_steps=3,
-                                                                    n_etypes=self.n_relations,
-                                                                    bias=True,
-                                                                    )}))
+            self.layers.append(
+                nn.ModuleDict(
+                    {
+                        "norm": self.get_norm(self.hidden_dim),
+                        "do": nn.Dropout(self.p_dropout),
+                        "ggc": GatedGraphConv(
+                            in_feats=self.hidden_dim,
+                            out_feats=self.hidden_dim,
+                            n_steps=3,
+                            n_etypes=self.n_relations,
+                            bias=True,
+                        ),
+                    }
+                )
+            )
 
     def gnn_forward(self, g: BatchedDGLGraph):
-        feats = g.ndata['h']
-        etypes = g.edata['edge_types'] + self.n_relations // 2
+        feats = g.ndata["h"]
+        etypes = g.edata["edge_types"] + self.n_relations // 2
         for block in self.layers:
-            feats = block['norm'](feats)
-            feats = block['do'](feats)
-            feats = block['ggc'](graph=g, feat=feats, etypes=etypes)
+            feats = block["norm"](feats)
+            feats = block["do"](feats)
+            feats = block["ggc"](graph=g, feat=feats, etypes=etypes)
         readout = self.readout(g, feats)
         out = self.fcout(readout)
         return out

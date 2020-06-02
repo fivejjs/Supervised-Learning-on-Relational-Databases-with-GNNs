@@ -36,7 +36,10 @@ class TabMLP(TabModelBase):
         """
         # t = time.perf_counter()
         cat_feats, cont_feats = input
-        cat_feats = [init(cat_feats[:, i]) for i, init in enumerate(self.cat_initializers.values())]
+        cat_feats = [
+            init(cat_feats[:, i])
+            for i, init in enumerate(self.cat_initializers.values())
+        ]
         if cat_feats != []:
             cat_feats = torch.cat(cat_feats, dim=1)
         # if self.training:

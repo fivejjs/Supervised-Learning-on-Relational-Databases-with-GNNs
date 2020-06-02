@@ -17,40 +17,55 @@ class TabularDataset(Dataset):
         self.datapoint_ids = datapoint_ids
         self.encoders = encoders
         self.ds_info = get_ds_info(dataset_name)
-        raw_data_path = os.path.join(data_root, self.ds_info['processed']['local_path'])
-        if 'acquirevaluedshopperschallenge' in dataset_name:
+        raw_data_path = os.path.join(data_root, self.ds_info["processed"]["local_path"])
+        if "acquirevaluedshopperschallenge" in dataset_name:
             self.raw_data = pd.read_csv(raw_data_path)
-            self.raw_data.set_index('id', inplace=True)
-        elif 'homecreditdefaultrisk' in dataset_name:
+            self.raw_data.set_index("id", inplace=True)
+        elif "homecreditdefaultrisk" in dataset_name:
             self.raw_data = pd.read_csv(raw_data_path)
-            self.raw_data.set_index('SK_ID_CURR', inplace=True)
-        elif 'kddcup2014' in dataset_name:
+            self.raw_data.set_index("SK_ID_CURR", inplace=True)
+        elif "kddcup2014" in dataset_name:
             self.raw_data = pd.read_csv(raw_data_path)
-            self.raw_data.set_index('projectid', inplace=True)
+            self.raw_data.set_index("projectid", inplace=True)
         else:
-            col_names = [c['name'] for c in self.ds_info['meta']['columns']]
+            col_names = [c["name"] for c in self.ds_info["meta"]["columns"]]
             self.raw_data = pd.read_csv(raw_data_path, header=None, names=col_names)
 
         if datapoint_ids is not None:
             self.raw_data = self.raw_data.loc[datapoint_ids]
-        if self.ds_info['processed']['task'] == 'regression':
-            targets = np.array(self.raw_data['TARGET']).astype(np.float)
+        if self.ds_info["processed"]["task"] == "regression":
+            targets = np.array(self.raw_data["TARGET"]).astype(np.float)
             self.targets = torch.Tensor(targets)
         else:
+
             def tfm(x):
-                if x in ['0', '-1', '0.0', 'no', 'No', 'neg', 'n', 'N', 'False', 'NRB', ' <=50K']:
+                if x in [
+                    "0",
+                    "-1",
+                    "0.0",
+                    "no",
+                    "No",
+                    "neg",
+                    "n",
+                    "N",
+                    "False",
+                    "NRB",
+                    " <=50K",
+                ]:
                     return 0
-                elif x == 'nan':
+                elif x == "nan":
                     return pd.np.nan
                 else:
                     return 1
 
-            targets = self.raw_data['TARGET'].astype(str).transform(tfm)
+            targets = self.raw_data["TARGET"].astype(str).transform(tfm)
             targets = np.array(targets).astype(np.float)
             self.targets = torch.LongTensor(targets)
-        self.raw_data = self.raw_data[[i for i in self.raw_data.columns if i != 'TARGET']]
+        self.raw_data = self.raw_data[
+            [i for i in self.raw_data.columns if i != "TARGET"]
+        ]
 
-        self.columns = self.ds_info['meta']['columns'][1:]  # Omitting the target column
+        self.columns = self.ds_info["meta"]["columns"][1:]  # Omitting the target column
         self.cat_feat_origin_cards = None
         self.cont_feat_origin = None
         self.feature_encoders = None
@@ -63,14 +78,14 @@ class TabularDataset(Dataset):
         if self.encoders is not None:
             self.feature_encoders = {}
             for c in self.columns:
-                col = self.raw_data[c['name']]
-                enc = data_encoders.__dict__[self.encoders[c['type']]]()
+                col = self.raw_data[c["name"]]
+                enc = data_encoders.__dict__[self.encoders[c["type"]]]()
                 try:
                     enc.fit(col)
                 except WontEncodeError as e:
                     print(f"Not encoding column '{c['name']}': {e}")
                     enc = NullEnc()
-                self.feature_encoders[c['name']] = enc
+                self.feature_encoders[c["name"]] = enc
 
     def encode(self, feature_encoders):
         if self.encoders is not None:
@@ -79,12 +94,15 @@ class TabularDataset(Dataset):
             cat_features = []
             self.cont_feat_origin = []
             cont_features = []
-            for col_name in [c['name'] for c in self.columns]:
+            for col_name in [c["name"] for c in self.columns]:
                 enc = feature_encoders[col_name]
                 col = self.raw_data[col_name]
                 cat_feats = enc.enc_cat(col)
                 if cat_feats is not None:
-                    self.cat_feat_origin_cards += [(f'{col_name}_{i}', card) for i, card in enumerate(enc.cat_cards)]
+                    self.cat_feat_origin_cards += [
+                        (f"{col_name}_{i}", card)
+                        for i, card in enumerate(enc.cat_cards)
+                    ]
                     cat_features.append(cat_feats)
                 cont_feats = enc.enc_cont(col)
                 if cont_feats is not None:
@@ -110,4 +128,7 @@ class TabularDataset(Dataset):
             input = cat_feats, cont_feats
             return input, target
         else:
-            return ' '.join(str(i) for i in self.raw_data.iloc[item, :].to_list()), target
+            return (
+                " ".join(str(i) for i in self.raw_data.iloc[item, :].to_list()),
+                target,
+            )

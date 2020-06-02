@@ -26,7 +26,7 @@ class ImbalancedDatasetSampler(torch.utils.data.sampler.Sampler):
         self.num_samples = len(data_source) if num_samples is None else num_samples
 
         # weight for each sample
-        print('Getting sampling weights for dataset')
+        print("Getting sampling weights for dataset")
         if isinstance(data_source, DatabaseDataset):
             labels = [dp[4] for dp_id, dp in data_source]
         elif isinstance(data_source, TabularDataset):
@@ -36,7 +36,9 @@ class ImbalancedDatasetSampler(torch.utils.data.sampler.Sampler):
         self.weights = torch.DoubleTensor(weights)
 
     def __iter__(self):
-        return iter(torch.multinomial(self.weights, self.num_samples, replacement=True).tolist())
+        return iter(
+            torch.multinomial(self.weights, self.num_samples, replacement=True).tolist()
+        )
 
     def __len__(self):
         return self.num_samples
